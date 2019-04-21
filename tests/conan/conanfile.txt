@@ -1,0 +1,8 @@
+[requires]
+	chk/0.1@fek/test
+
+[options]
+
+[generators]
+	cmake_find_package
+	cmake_paths
