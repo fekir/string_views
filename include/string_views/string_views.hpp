@@ -26,7 +26,7 @@ enum debug_policy {
 #else
 	global = unchecked,
 #endif
-}; # FIXME: implementation is incomplete
+}; // FIXME: implementation is incomplete
 
 // constexpr strlen
 namespace detail {
