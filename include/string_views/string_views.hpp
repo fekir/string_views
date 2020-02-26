@@ -90,6 +90,8 @@ struct basic_string_views {
 		content_policy::check(m_begin, m_end);
 	}
 
+	constexpr basic_string_views(std::nullptr_t) = delete;
+
 	template<typename _Dummy = void,
 		 typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::implicit_)
 				   //&& (format == format_policy::zero_terminated)  //

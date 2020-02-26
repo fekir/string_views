@@ -52,6 +52,11 @@ target_link_libraries(test.explicit.charp.ct string_views::string_views)
 add_test(NAME explicit.charp.ct
 	COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target test.explicit.charp.ct
 )
+add_executable(test.nullptr.ct EXCLUDE_FROM_ALL test.nullptr.ct.cpp)
+target_link_libraries(test.nullptr.ct string_views::string_views)
+add_test(NAME nullptr.ct
+	COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target test.nullptr.ct
+)
 add_executable(test.explicit.string.ct EXCLUDE_FROM_ALL test.explicit.string.ct.cpp)
 target_link_libraries(test.explicit.string.ct string_views::string_views)
 add_test(NAME explicit.string.ct
@@ -88,16 +93,18 @@ set_tests_properties(
 )
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    set(TEST_CONVERSION_ERROR ".* no known conversion from .*")
+	set(TEST_CONVERSION_ERROR ".* no known conversion from .*")
 	set(TEST_NO_FUNCTION_ERROR ".* no matching .* function for call to .*") # no matching member function for call to
+        set(TEST_DELETED_FUNCTION_ERROR ".*has been explicitly marked deleted.*")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	set(TEST_CONVERSION_ERROR ".* error: could not convert .*")
 	set(TEST_NO_FUNCTION_ERROR ".* no matching function for call to .*")
+        set(TEST_DELETED_FUNCTION_ERROR ".*use of deleted function.*")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-    set(TEST_CONVERSION_ERROR ".* error C2664: .* cannot convert .*")
+	set(TEST_CONVERSION_ERROR ".* error C2664: .* cannot convert .*")
 	set(TEST_NO_FUNCTION_ERROR ".* no matching overloaded function found.*")
 else()
-    message(FAIL "No known error message for ${CMAKE_CXX_COMPILER_ID}")
+	message(FAIL "No known error message for ${CMAKE_CXX_COMPILER_ID}")
 endif()
 
 set(TEST_FORMAT_POLICY_ERROR ".*not compatible format policy.*")
@@ -107,6 +114,12 @@ set_tests_properties(
 	PROPERTIES
 		#WILL_FAIL TRUE
 		PASS_REGULAR_EXPRESSION "${TEST_CONVERSION_ERROR}"
+)
+set_tests_properties(
+	nullptr.ct
+	PROPERTIES
+		#WILL_FAIL TRUE
+		PASS_REGULAR_EXPRESSION "${TEST_DELETED_FUNCTION_ERROR}"
 )
 set_tests_properties(
 	format.implicit.ct format.explicit.ct
