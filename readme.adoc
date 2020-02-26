@@ -1,0 +1,172 @@
+= string_views
+
+
+== Strings in {cpp}
+
+
+.Comparison
+|===
+| string type                            | since     | owning | `\0` terminated                       | std::string conversion | const char* conversion | std::string_view
+
+| (const) char*                          | {cpp}98   | no     | mostly by convention                  | implicit               | implicit               | implicit
+| (const) char[]                         | {cpp}98   | yes    | literals, otheriwse not necessarily   | implicit               | implicit               | implicit
+| std::string                            | {cpp}98   | yes    | yes                                   | implicit               | explicit               | implicit
+| std::string_view                       | {cpp}17   | no     | no                                    | explicit               | explicit               | implicit
+
+|===
+
+
+
+Conversion to `std::string` and `std::string_view` from `char*`, `char[]` and `std::string` where probably made implicit for allowing to write
+
+----
+void foo(const std::string&);
+void bar(std::string_view);
+
+
+foo("literal");
+bar("literal");
+std::string str;
+foo(str);
+bar(str);
+----
+
+as spelling `std::string` and `std::string_view` for those use-cases would have been very verbose.
+
+Contrary to `const char*`, the conversion from the non-owning container (`std::string_view`) to the owning (`std::string`) is explicit
+
+----
+std:.string_view strv = "..."
+foo(std::string(strv));
+----
+
+Contrary to `const char*`, the conversion from the owning container (`std::string`) to the non-owning (`std::string_view`) is implicit
+
+----
+std::string str = "...";
+bar(str)
+----
+
+Thus the difference of `std::string` and `std::string_view` is not only about being owning and non-owning, it's about `\0` termination and conversions too:
+
+.Comparison
+|===
+
+| string type        | owning | format          | conversion from other container | conversion to other container
+
+| `std::string`      | yes    | `\0` terminated |   explicit                      | implicit
+| `std::string_view` | no     | not limitations |   implicit                      | explicit
+
+|===
+
+If we want a non-owning string container type with explicit conversion, to avoid errors like
+
+----
+std::string_view strv = std::string("a");
+----
+
+We need to look outside of the standard library (and char* does not count as container type).
+
+
+If we want a non-owning string with implicit conversion to owning, in order to be able to write
+
+----
+void foo(const std::string&);
+
+std::string_view strv = "...";
+foo(strv);
+----
+
+Just as we are able with `const char*`, we need again to look outside of the standard library.
+
+
+If we want a non-owning `\0` terminated string, then `std::string_view` is not the right choice, `const char*` is, unfortunately, a better choice.
+
+
+
+Those are shortcomings of `std::string_view`, but not because the class is flawly designed, but because there are other use-cases where the specified interface make more sense.
+
+It is hardly possible to design an interface to please everyone.
+Designing is about compromises.
+
+
+Unlike other programming languages, {cpp} has already 4 ways of expressing a sequence of characters.
+
+For the sake of simplicity I'm leaving out the `wchar_t` and other character types, as well as open problems like encoding.
+
+Many libraries redefine some sort of owning string-class.
+Some examples are like `CString` from the https://docs.microsoft.com/cpp/atl-mfc-shared/reference/cstringt-class?view=vs-2019[MFC library], `XMLString` from the https://xerces.apache.org/xerces-c/apiDocs-3/classXMLString.html[Xerces library] from xml-security, `QString` from https://doc.qt.io/qt-5/qstring.html[Qt framework], `absl::string_view` from the https://abseil.io/docs/cpp/guides/strings#string_view[abseil library], `eastl::string` from teh http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2271.html[EASTL] library and so on.
+Granted, some of those string classes continue to exists because of legacy code.
+
+Conversion rules, `\0` termination, ownership, ... all classes can and do decide differentyl how to implement those properties.
+This is so because there are different needs, design and performance considerations.
+
+
+== What does `string_views` provide
+
+I've identified (at least for my most common use-cases) following "policies"
+
+  * conversion policy
+  * format policy
+  * content policy
+  * allocation/copy policy
+  * rw policy
+
+The conversion policy is straightforward.
+
+`std::string_view` needs to get explicitly converted to `std::string`, while the opposite is not true.
+In some use-cases this is the desired behaviour, in other use-cases we want the opposite behaviour.
+It depends if we value more speed over security.
+
+Also format policy is easy to understand
+`std::string` is `\0` terminated, `std::string_view` is not.
+This is very unfortunate since most OS API require a `\0` terminated string, but permits other functionalities (like substring), that are otherwise not possible.
+So either we use `const char*`, or we use `std::string` which might do unnecessary allocations, or we use `std::string_view` and hope that the content is `\0` terminated (after all its what we do with `const char*`, but much easier to misuse)
+
+Notice that the trailing `\0` is not part of the content (otherwise `length` would return one character more), so this is different from the content policy.
+
+
+Neither `std::string`, nor `std::string_view` have a content policy, but many interfaces do.
+For example when creating files, a filename cannot contain an embedded `\0` or `/`.
+
+Either we create new string types with those invariants, or the checks are outside of the string class.
+
+The allocation/copy policy is the main selling point of `std::string_view` vs `std::string` and the allocator parameter in `std::string`.
+
+`std::string` performs deeps copies, while `std::string_view` perform shallow copies.
+`std::string` allocates, thus copying is costly, while `std::string_view` does not allocate, thus passing by value is preferred than passing by reference.
+
+But isn't a huge difference about all those string classe the available methods?
+Aren't they the interface of a string class?
+
+Member methods can be added later.
+
+Either as a free function, or by subclassing non-virtually and creating (as before) a new type.
+
+https://xkcd.com/927/
+
+Most strings classes would have the same underlying implementation, the main difference is the constructor/conversions, add/enforce trailing `\0` or not, validate content, allocate or not.
+
+As allocating/non-allocating and ro/rw makes the behaviour of the class fundamentally different, `string_views` is only about the first three policies: conversions, format and content.
+
+The library targets {cpp}>=14, it could be backported to {cpp}11 and {cpp}03, but some features might be missing.
+
+
+It should permit to cover all use cases that are not covered by `std::string` and `std::string_view`.
+
+Notice that the allocation/copy policy is already covered by having `std::string` and `std::string_view` (and this library).
+The rw policy is also already covered for `std::string`, while `string_views` are all ro.
+This is because of `operator==`.
+
+If we would remove it, then, as long as the content length does not change, there are no reason not to permit rw string_view (probably the name should be changed)
+It would make it very hard to enforce a content policy, as practically all functions (`operator[]`, `iterators`, ...) permit to change the content.
+
+Thus it does not make much sense to enforce a content policy on rw strings inside the class itself.
+
+
+Other design decision:
+do not duplicate every function of `std::string`/`std::string_view`.
+
+Some depend on the invariant of the class (substring), other are just redundant (size vs length), and most of the remaining can be implemented as algorithm.
+Duplicating the whole interface doesn't provide many benefits.
+The main disadvantage is that it does not make `string_views` a drop-in replacement for the string classes inside `std`.
