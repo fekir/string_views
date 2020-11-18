@@ -95,10 +95,10 @@ Unlike other programming languages, {cpp} has already 4 ways of expressing a seq
 For the sake of simplicity I'm leaving out the `wchar_t` and other character types, as well as open problems like encoding.
 
 Many libraries redefine some sort of owning string-class.
-Some examples are like `CString` from the https://docs.microsoft.com/cpp/atl-mfc-shared/reference/cstringt-class?view=vs-2019[MFC library], `XMLString` from the https://xerces.apache.org/xerces-c/apiDocs-3/classXMLString.html[Xerces library] from xml-security, `QString` from https://doc.qt.io/qt-5/qstring.html[Qt framework], `absl::string_view` from the https://abseil.io/docs/cpp/guides/strings#string_view[abseil library], `eastl::string` from teh http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2271.html[EASTL] library and so on.
+Some examples are like `CString` from the https://docs.microsoft.com/cpp/atl-mfc-shared/reference/cstringt-class?view=vs-2019[MFC library], `XMLString` from the https://xerces.apache.org/xerces-c/apiDocs-3/classXMLString.html[Xerces library] from xml-security, `QString` from https://doc.qt.io/qt-5/qstring.html[Qt framework], `absl::string_view` from the https://abseil.io/docs/cpp/guides/strings#string_view[abseil library], `eastl::string` from the http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2271.html[EASTL] library and so on.
 Granted, some of those string classes continue to exists because of legacy code.
 
-Conversion rules, `\0` termination, ownership, ... all classes can and do decide differentyl how to implement those properties.
+Conversion rules, `\0` termination, ownership, ... all classes can and do decide differently how to implement those properties.
 This is so because there are different needs, design and performance considerations.
 
 
