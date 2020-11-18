@@ -107,7 +107,7 @@ else()
 	message(FAIL "No known error message for ${CMAKE_CXX_COMPILER_ID}")
 endif()
 
-set(TEST_FORMAT_POLICY_ERROR ".*not compatible format policy.*")
+set(TEST_FORMAT_POLICY_ERROR ".*conversion to zero_terminated not allowed.*")
 
 set_tests_properties(
 	explicit.charp.ct explicit.string.ct explicit.implicit_view.ct

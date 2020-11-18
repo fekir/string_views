@@ -37,13 +37,16 @@ template<class character> struct default_content_policy {
 };
 
 template<typename character, class content_policy>  //
-struct checked_buff_view : private buff_view<character> {
-	constexpr checked_buff_view(const character* begin_, std::size_t size_) : buff_view<character>(begin_, size_) {
+class checked_buff_view : private buff_view<character> {
+	using base = buff_view<character>;
+
+public:
+	constexpr checked_buff_view(const character* begin_, std::size_t size_) : base(begin_, size_) {
 		content_policy::check(this->data(), this->data() + this->size());
 	}
-	using buff_view<character>::data;
-	using buff_view<character>::size;
-	using buff_view<character>::empty;
+	using base::data;
+	using base::size;
+	using base::empty;
 };
 
 namespace detail {
@@ -56,6 +59,53 @@ enum class conversion_policy {
 	implicit_,
 	explicit_,
 };  // FIXME: find better name as explicit reserved
+
+template<class character = char,                                                        //
+     conversion_policy explicit_constructor_from_charp = conversion_policy::explicit_,  //
+     class content_policy = default_content_policy<character>                           //
+     >
+class create_checked_buff_view_from_str : private checked_buff_view<character, content_policy> {
+	using base = checked_buff_view<character, content_policy>;
+
+public:
+	constexpr create_checked_buff_view_from_str(const character* begin_, const character* end_) : base(begin_, end_ - begin_) {
+	}
+	constexpr create_checked_buff_view_from_str(const character* begin_, std::size_t size_) : base(begin_, size_) {
+	}
+	constexpr create_checked_buff_view_from_str(std::nullptr_t) = delete;
+
+	// convert from character*
+	template<typename _Dummy = void,
+	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::explicit_) && std::is_void<_Dummy>::value,
+	          character>::type = false>
+	constexpr explicit create_checked_buff_view_from_str(const character* data_) : base(data_, detail::len(data_)) {
+	}
+
+	template<typename _Dummy = void,
+	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::implicit_) && std::is_void<_Dummy>::value,
+	          character>::type = true>
+	constexpr create_checked_buff_view_from_str(const character* data_) : base(data_, detail::len(data_)) {
+	}
+
+	// convert from std::string
+	template<class string,
+	     typename std::enable_if<explicit_constructor_from_charp == conversion_policy::explicit_ && !std::is_void<string>::value,
+	          character>::type = true>
+	constexpr explicit create_checked_buff_view_from_str(const string& s) : base(s.c_str(), s.size()) {
+	}
+	template<class string,
+	     typename std::enable_if<explicit_constructor_from_charp == conversion_policy::implicit_ && !std::is_void<string>::value,
+	          character>::type = true>
+	constexpr create_checked_buff_view_from_str(const string& s) : base(s.c_str(), s.size()) {
+	}
+
+	// convert from std::string_view
+	// ???
+
+	using base::data;
+	using base::size;
+	using base::empty;
+};
 
 enum class format_policy {
 	zero_terminated,
@@ -141,10 +191,16 @@ template<class character = char,                                                
      class content_policy = default_content_policy<character>,                          //
      debug_policy debug = debug_policy::global                                          //  does not change constructors behaviour
      >
-struct basic_string_views
-            : private checked_buff_view<character, content_policy>
+class basic_string_views
+            : private create_checked_buff_view_from_str<character, explicit_constructor_from_charp, content_policy>
             , private iter_buffer<basic_string_views<character, explicit_constructor_from_charp, format, content_policy, debug>,
                    debug> {
+	using crtp_access_buffer =
+	     iter_buffer<basic_string_views<character, explicit_constructor_from_charp, format, content_policy, debug>, debug>;
+
+	using base_construct = create_checked_buff_view_from_str<character, explicit_constructor_from_charp, content_policy>;
+
+public:
 	using difference_type = ptrdiff_t;
 	using size_type = std::size_t;  // TODO: consider signed...
 	using value_type = character;
@@ -153,38 +209,7 @@ struct basic_string_views
 	using reference = const value_type&;
 	using const_reference = const value_type&;
 
-	using crtp_access_buffer =
-	     iter_buffer<basic_string_views<character, explicit_constructor_from_charp, format, content_policy, debug>, debug>;
-
-	/// constructor from char*
-	/// for all policies, and conditional explicit
-	template<typename _Dummy = void,
-	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::explicit_)
-	               //&& (format == format_policy::zero_terminated)  //
-	               && std::is_void<_Dummy>::value,
-	          character>::type = false>
-	constexpr explicit basic_string_views(const value_type* data_) :
-	            checked_buff_view<character, content_policy>(data_, detail::len(data_)) {
-	}
-
-	constexpr basic_string_views(std::nullptr_t) = delete;
-
-	template<typename _Dummy = void,
-	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::implicit_)
-	               //&& (format == format_policy::zero_terminated)  //
-	               && std::is_void<_Dummy>::value,
-	          character>::type = true>
-	constexpr basic_string_views(const value_type* data_) : checked_buff_view<character, content_policy>(data_, detail::len(data_)) {
-	}
-
-	/// constructor from iterators
-	/// for all format_policy, conditional explicit
-	constexpr basic_string_views(const value_type* begin_, const value_type* end_) :
-	            checked_buff_view<character, content_policy>(begin_, end_ - begin_) {
-	}
-	constexpr basic_string_views(const value_type* begin_, size_type size_) :
-	            checked_buff_view<character, content_policy>(begin_, size_) {
-	}
+	using base_construct::base_construct;
 
 	/// constructor from self
 	/// for all format_policy, conditional explicit
@@ -195,8 +220,8 @@ struct basic_string_views
 	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::explicit_) && std::is_void<_Dummy>::value,
 	          character>::type = true>
 	constexpr explicit basic_string_views(basic_string_views<character, p, f, content_policy, d> sv) :
-	            checked_buff_view<character, content_policy>(sv.data(), sv.size()) {
-		static_assert(f == format_policy::zero_terminated || f == format, "not compatible format policy");
+	            base_construct(sv.data(), sv.size()) {
+		static_assert(f == format_policy::zero_terminated || f == format, "conversion to zero_terminated not allowed");
 	}
 	template<typename _Dummy = void,  //
 	     conversion_policy p,         //
@@ -204,22 +229,8 @@ struct basic_string_views
 	     debug_policy d,              //
 	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::implicit_) && std::is_void<_Dummy>::value,
 	          character>::type = true>
-	constexpr basic_string_views(basic_string_views<character, p, f, content_policy, d> sv) :
-	            checked_buff_view<character, content_policy>(sv.data(), sv.size()) {
-		static_assert(f == format_policy::zero_terminated || f == format, "not compatible format policy");
-	}
-
-	/// constructor from std string object - does not work for string_view
-	/// for all format_policy, conditional explicit
-	template<class string,
-	     typename std::enable_if<explicit_constructor_from_charp == conversion_policy::explicit_ && !std::is_void<string>::value,
-	          character>::type = true>
-	constexpr explicit basic_string_views(const string& s) : checked_buff_view<character, content_policy>(s.c_str(), s.size()) {
-	}
-	template<class string,
-	     typename std::enable_if<explicit_constructor_from_charp == conversion_policy::implicit_ && !std::is_void<string>::value,
-	          character>::type = true>
-	constexpr basic_string_views(const string& s) : checked_buff_view<character, content_policy>(s.c_str(), s.size()) {
+	constexpr basic_string_views(basic_string_views<character, p, f, content_policy, d> sv) : base_construct(sv.data(), sv.size()) {
+		static_assert(f == format_policy::zero_terminated || f == format, "conversion to zero_terminated not allowed");
 	}
 
 	/// minimal interface
@@ -243,11 +254,6 @@ struct basic_string_views
 	using crtp_access_buffer::front;
 	using crtp_access_buffer::back;
 	using crtp_access_buffer::operator[];
-
-	// safe/implicit only for 0-terminated, do we need it?
-	/*	explicit operator const_pointer() {
-		return this->m_begin;
-	}*/
 
 	// FIXME
 	// substring has limitation defined by the invariant.
