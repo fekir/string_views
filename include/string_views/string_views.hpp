@@ -82,20 +82,58 @@ using checked_debug = iterator_type<debug_policy::checked>;
 // could save checked iter instead of pointer-type?
 // as downside c_str/data gets more complicated...
 #if defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL >= 1 && defined(_MSC_VER)
-template<class I> constexpr auto make_iterator(checked_debug, I it, std::size_t size, std::size_t offset = 0) {
+template<class I> constexpr auto make_iterator(checked_debug, I it, std::size_t size, std::size_t offset = 0) noexcept {
 	return stdext::make_checked_array_iterator(it, size, offset);
 }
 #else
-template<class I> constexpr I make_iterator(checked_debug, I it, std::size_t, std::size_t offset = 0) {
+template<class I> constexpr I make_iterator(checked_debug, I it, std::size_t, std::size_t offset = 0) noexcept {
 	// FIXME: does stdlib have nothing similar to msvc?
 	return it + offset;
 }
 #endif
-template<class I> constexpr I make_iterator(unchecked_debug, I it, std::size_t, std::size_t offset = 0) {
+template<class I> constexpr I make_iterator(unchecked_debug, I it, std::size_t, std::size_t offset = 0) noexcept {
 	return it + offset;
 }
 
 }  // namespace detail
+
+template<typename buff, debug_policy debug>  //
+struct iter_buffer {
+	constexpr auto begin() const noexcept {
+		auto b = static_cast<const buff*>(this);
+		return detail::make_iterator(detail::iterator_type<debug>{}, b->data(), b->size());
+	}
+	constexpr auto end() const noexcept {
+		auto b = static_cast<const buff*>(this);
+		return detail::make_iterator(detail::iterator_type<debug>{}, b->data(), b->size(), b->size());
+	}
+	constexpr auto cbegin() const noexcept {
+		return this->begin();
+	}
+	constexpr auto cend() const noexcept {
+		return this->end();
+	}
+
+	constexpr auto front() const {
+		auto b = static_cast<const buff*>(this);
+		assert(debug == debug_policy::unchecked || !(b->empty() && "out of bound access"));
+		return *(b->data());
+	}
+	constexpr auto back() const {
+		auto b = static_cast<const buff*>(this);
+		assert(debug == debug_policy::unchecked || !(b->empty() && "out of bound access"));
+		return *(b->data() + b->size() - 1);
+	}
+	//constexpr auto operator[](typename buff::size_type s) const { // FIXME: does not work....
+	constexpr auto operator[](std::size_t s) const {
+		auto b = static_cast<const buff*>(this);
+		assert(debug == debug_policy::unchecked || (s < b->size() && "out of bound access"));
+		return b->data()[s];
+	}
+	// FIXME: add overloads for integral types, and disallow enum, bool, characters, ...
+	//constexpr auto operator[](bool) const = delete;
+	// causes issue, as 0 is neither bool nor std::size_t, but convertible to both
+};
 
 template<class character = char,                                                        //
      conversion_policy explicit_constructor_from_charp = conversion_policy::explicit_,  //
@@ -103,7 +141,10 @@ template<class character = char,                                                
      class content_policy = default_content_policy<character>,                          //
      debug_policy debug = debug_policy::global                                          //  does not change constructors behaviour
      >
-struct basic_string_views : private checked_buff_view<character, content_policy> {
+struct basic_string_views
+            : private checked_buff_view<character, content_policy>
+            , private iter_buffer<basic_string_views<character, explicit_constructor_from_charp, format, content_policy, debug>,
+                   debug> {
 	using difference_type = ptrdiff_t;
 	using size_type = std::size_t;  // TODO: consider signed...
 	using value_type = character;
@@ -111,6 +152,9 @@ struct basic_string_views : private checked_buff_view<character, content_policy>
 	using const_pointer = const value_type*;
 	using reference = const value_type&;
 	using const_reference = const value_type&;
+
+	using crtp_access_buffer =
+	     iter_buffer<basic_string_views<character, explicit_constructor_from_charp, format, content_policy, debug>, debug>;
 
 	/// constructor from char*
 	/// for all policies, and conditional explicit
@@ -135,11 +179,11 @@ struct basic_string_views : private checked_buff_view<character, content_policy>
 
 	/// constructor from iterators
 	/// for all format_policy, conditional explicit
-	constexpr basic_string_views(const value_type* begin, const value_type* end) :
-	            checked_buff_view<character, content_policy>(begin, end - begin) {
+	constexpr basic_string_views(const value_type* begin_, const value_type* end_) :
+	            checked_buff_view<character, content_policy>(begin_, end_ - begin_) {
 	}
-	constexpr basic_string_views(const value_type* begin, size_type size_) :
-	            checked_buff_view<character, content_policy>(begin, size_) {
+	constexpr basic_string_views(const value_type* begin_, size_type size_) :
+	            checked_buff_view<character, content_policy>(begin_, size_) {
 	}
 
 	/// constructor from self
@@ -189,39 +233,21 @@ struct basic_string_views : private checked_buff_view<character, content_policy>
 	constexpr const_pointer c_str() const noexcept {
 		return this->data();
 	}
-	constexpr const_reference front() const {
-		assert(debug == debug_policy::unchecked || !(this->empty() && "out of bound access"));
-		return *(this->data());
-	}
-	constexpr const_reference back() const {
-		assert(debug == debug_policy::unchecked || !(this->empty() && "out of bound access"));
-		return *(this->data() + this->size() - 1);
-	}
 
-	/// iterators
-	constexpr auto begin() const noexcept {
-		return detail::make_iterator(detail::iterator_type<debug>{}, this->data(), this->size());
-	}
-	constexpr auto end() const noexcept {
-		return detail::make_iterator(detail::iterator_type<debug>{}, this->data(), this->size(), this->size());
-	}
-	constexpr auto cbegin() const noexcept {
-		return detail::make_iterator(detail::iterator_type<debug>{}, this->data(), this->size());
-	}
-	constexpr auto cend() const noexcept {
-		return detail::make_iterator(detail::iterator_type<debug>{}, this->data(), this->size(), this->size());
-	}
+	friend crtp_access_buffer;  // otherwise static_cast in crtp does not work!
+	using crtp_access_buffer::begin;
+	using crtp_access_buffer::end;
+	using crtp_access_buffer::cbegin;
+	using crtp_access_buffer::cend;
+
+	using crtp_access_buffer::front;
+	using crtp_access_buffer::back;
+	using crtp_access_buffer::operator[];
+
 	// safe/implicit only for 0-terminated, do we need it?
 	/*	explicit operator const_pointer() {
 		return this->m_begin;
 	}*/
-
-	// FIXME: add overloads for integral types, and disallow enum, bool, characters, ...
-	constexpr const_reference operator[](size_type s) const {
-		assert(debug == debug_policy::unchecked || (s < this->size() && "out of bound access"));
-		return this->data()[s];
-	}
-	// reverse iterators
 
 	// FIXME
 	// substring has limitation defined by the invariant.
