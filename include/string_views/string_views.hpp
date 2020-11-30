@@ -174,15 +174,15 @@ struct iter_buffer {
 		assert(debug == debug_policy::unchecked || !(b->empty() && "out of bound access"));
 		return *(b->data() + b->size() - 1);
 	}
-	//constexpr auto operator[](typename buff::size_type s) const { // FIXME: does not work....
-	constexpr auto operator[](std::size_t s) const {
+	template<typename index>  // templated otherwise ambiguos overload
+	constexpr auto operator[](index s) const {
+		static_assert(std::is_integral<index>::value, "only integral types are valid indexes");
+		static_assert(not std::is_same<index, bool>::value, "bool is not a valid index type");
 		auto b = static_cast<const buff*>(this);
-		assert(debug == debug_policy::unchecked || (s < b->size() && "out of bound access"));
+		assert(
+		     debug == debug_policy::unchecked || (0 <= s && static_cast<decltype(b->size())>(s) < b->size() && "out of bound access"));
 		return b->data()[s];
 	}
-	// FIXME: add overloads for integral types, and disallow enum, bool, characters, ...
-	//constexpr auto operator[](bool) const = delete;
-	// causes issue, as 0 is neither bool nor std::size_t, but convertible to both
 };
 
 template<class character = char,                                                        //

@@ -159,4 +159,9 @@ int main() {
 		} catch (int) {
 		}
 	}
+
+	{  // signed and unsigned are both valid indexes
+		foo_explicit_view_data[1];
+		foo_explicit_view_data[1u];
+	}
 }
