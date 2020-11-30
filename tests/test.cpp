@@ -164,4 +164,8 @@ int main() {
 		foo_explicit_view_data[1];
 		foo_explicit_view_data[1u];
 	}
+
+	{  // constructor with default policy is noexcept
+		static_assert(noexcept(ex_z_string_view("")), "");
+	}
 }

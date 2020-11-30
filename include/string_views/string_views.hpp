@@ -41,7 +41,8 @@ class checked_buff_view : private buff_view<character> {
 	using base = buff_view<character>;
 
 public:
-	constexpr checked_buff_view(const character* begin_, std::size_t size_) : base(begin_, size_) {
+	constexpr static bool construct_noexcept = noexcept(content_policy::check(nullptr, nullptr));
+	constexpr checked_buff_view(const character* begin_, std::size_t size_) noexcept(construct_noexcept) : base(begin_, size_) {
 		content_policy::check(this->data(), this->data() + this->size());
 	}
 	using base::data;
@@ -50,7 +51,7 @@ public:
 };
 
 namespace detail {
-template<typename character> unsigned long constexpr len(const character* str) {
+template<typename character> unsigned long constexpr len(const character* str) noexcept {
 	return *str ? 1u + len(++str) : 0u;
 }
 }  // namespace detail
@@ -68,9 +69,12 @@ class create_checked_buff_view_from_str : private checked_buff_view<character, c
 	using base = checked_buff_view<character, content_policy>;
 
 public:
-	constexpr create_checked_buff_view_from_str(const character* begin_, const character* end_) : base(begin_, end_ - begin_) {
+	using base::construct_noexcept;
+	constexpr create_checked_buff_view_from_str(const character* begin_, const character* end_) noexcept(construct_noexcept) :
+	            base(begin_, end_ - begin_) {
 	}
-	constexpr create_checked_buff_view_from_str(const character* begin_, std::size_t size_) : base(begin_, size_) {
+	constexpr create_checked_buff_view_from_str(const character* begin_, std::size_t size_) noexcept(construct_noexcept) :
+	            base(begin_, size_) {
 	}
 	constexpr create_checked_buff_view_from_str(std::nullptr_t) = delete;
 
@@ -78,25 +82,26 @@ public:
 	template<typename _Dummy = void,
 	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::explicit_) && std::is_void<_Dummy>::value,
 	          character>::type = false>
-	constexpr explicit create_checked_buff_view_from_str(const character* data_) : base(data_, detail::len(data_)) {
+	constexpr explicit create_checked_buff_view_from_str(const character* data_) noexcept(construct_noexcept) :
+	            base(data_, detail::len(data_)) {
 	}
 
 	template<typename _Dummy = void,
 	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::implicit_) && std::is_void<_Dummy>::value,
 	          character>::type = true>
-	constexpr create_checked_buff_view_from_str(const character* data_) : base(data_, detail::len(data_)) {
+	constexpr create_checked_buff_view_from_str(const character* data_) noexcept(construct_noexcept) : base(data_, detail::len(data_)) {
 	}
 
 	// convert from std::string
 	template<class string,
 	     typename std::enable_if<explicit_constructor_from_charp == conversion_policy::explicit_ && !std::is_void<string>::value,
 	          character>::type = true>
-	constexpr explicit create_checked_buff_view_from_str(const string& s) : base(s.c_str(), s.size()) {
+	constexpr explicit create_checked_buff_view_from_str(const string& s) noexcept(construct_noexcept) : base(s.c_str(), s.size()) {
 	}
 	template<class string,
 	     typename std::enable_if<explicit_constructor_from_charp == conversion_policy::implicit_ && !std::is_void<string>::value,
 	          character>::type = true>
-	constexpr create_checked_buff_view_from_str(const string& s) : base(s.c_str(), s.size()) {
+	constexpr create_checked_buff_view_from_str(const string& s) noexcept(construct_noexcept) : base(s.c_str(), s.size()) {
 	}
 
 	// convert from std::string_view
@@ -219,7 +224,8 @@ public:
 	     debug_policy d,              //
 	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::explicit_) && std::is_void<_Dummy>::value,
 	          character>::type = true>
-	constexpr explicit basic_string_views(basic_string_views<character, p, f, content_policy, d> sv) :
+	constexpr explicit basic_string_views(basic_string_views<character, p, f, content_policy, d> sv) noexcept(
+	     base_construct::construct_noexcept) :
 	            base_construct(sv.data(), sv.size()) {
 		static_assert(f == format_policy::zero_terminated || f == format, "conversion to zero_terminated not allowed");
 	}
@@ -229,7 +235,9 @@ public:
 	     debug_policy d,              //
 	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::implicit_) && std::is_void<_Dummy>::value,
 	          character>::type = true>
-	constexpr basic_string_views(basic_string_views<character, p, f, content_policy, d> sv) : base_construct(sv.data(), sv.size()) {
+	constexpr basic_string_views(basic_string_views<character, p, f, content_policy, d> sv) noexcept(
+	     base_construct::construct_noexcept) :
+	            base_construct(sv.data(), sv.size()) {
 		static_assert(f == format_policy::zero_terminated || f == format, "conversion to zero_terminated not allowed");
 	}
 
@@ -261,7 +269,7 @@ public:
 	// zstring_view can make substr only from somewhere in the middle till the end
 	// non_empty_string_view should make a substring that is not empty...
 	// otherwise make this method generic, and throught template param make
-	basic_string_views substring() {
+	basic_string_views substring() noexcept {
 		return basic_string_views(this->data(), this->data() + this->size());
 	}
 
