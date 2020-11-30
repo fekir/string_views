@@ -8,28 +8,26 @@ if(CMAKE_CROSSCOMPILING AND ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 		# for testing in wine...
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
 	endif()
+
+	#eases testing in wine...
+	#since cmake 3.15: https://stackoverflow.com/questions/14172856/compile-with-mt-instead-of-md-using-cmake
+	set(CompilerFlags
+	    CMAKE_CXX_FLAGS
+	    CMAKE_CXX_FLAGS_DEBUG
+	    CMAKE_CXX_FLAGS_RELEASE
+	    CMAKE_CXX_FLAGS_MINSIZEREL
+	    CMAKE_CXX_FLAGS_RELWITHDEBINFO
+	    CMAKE_C_FLAGS
+	    CMAKE_C_FLAGS_DEBUG
+	    CMAKE_C_FLAGS_RELEASE
+	    CMAKE_C_FLAGS_MINSIZEREL
+	    CMAKE_C_FLAGS_RELWITHDEBINFO
+	)
+	foreach(CompilerFlag ${CompilerFlags})
+	    string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+	    set(${CompilerFlag} "${${CompilerFlag}}" CACHE STRING "msvc compiler flags" FORCE)
+	endforeach()
 endif()
-
-#eases testing in wine...
-
-#since cmake 3.15: https://stackoverflow.com/questions/14172856/compile-with-mt-instead-of-md-using-cmake
-set(CompilerFlags
-        CMAKE_CXX_FLAGS
-        CMAKE_CXX_FLAGS_DEBUG
-        CMAKE_CXX_FLAGS_RELEASE
-        CMAKE_CXX_FLAGS_MINSIZEREL
-        CMAKE_CXX_FLAGS_RELWITHDEBINFO
-        CMAKE_C_FLAGS
-        CMAKE_C_FLAGS_DEBUG
-        CMAKE_C_FLAGS_RELEASE
-        CMAKE_C_FLAGS_MINSIZEREL
-        CMAKE_C_FLAGS_RELWITHDEBINFO
-        )
-foreach(CompilerFlag ${CompilerFlags})
-    string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
-    set(${CompilerFlag} "${${CompilerFlag}}" CACHE STRING "msvc compiler flags" FORCE)
-endforeach()
-
 
 add_executable(mytest test.cpp test.foo.hpp)
 target_link_libraries(mytest string_views::string_views)
