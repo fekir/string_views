@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 3.11)
 project(test-string_views VERSION 1.0.0 LANGUAGES CXX)
 
 if(CMAKE_CROSSCOMPILING AND ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
