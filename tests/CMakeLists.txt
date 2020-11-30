@@ -47,41 +47,19 @@ add_test(NAME mytest COMMAND ${TARGET_SYSTEM_EMULATOR} $<TARGET_FILE:mytest>)
 #				# https://github.com/clibs/cmocka/blob/master/example/CMakeLists.txt
 #)
 ########## FAILING TESTS ##########
-add_executable(test.explicit.charp.ct EXCLUDE_FROM_ALL test.explicit.charp.ct.cpp)
-target_link_libraries(test.explicit.charp.ct string_views::string_views)
-add_test(NAME explicit.charp.ct
-	COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target test.explicit.charp.ct
-)
-add_executable(test.nullptr.ct EXCLUDE_FROM_ALL test.nullptr.ct.cpp)
-target_link_libraries(test.nullptr.ct string_views::string_views)
-add_test(NAME nullptr.ct
-	COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target test.nullptr.ct
-)
-add_executable(test.explicit.string.ct EXCLUDE_FROM_ALL test.explicit.string.ct.cpp)
-target_link_libraries(test.explicit.string.ct string_views::string_views)
-add_test(NAME explicit.string.ct
-	COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target test.explicit.string.ct
-)
-add_executable(test.explicit.implicit_view.ct EXCLUDE_FROM_ALL test.explicit.implicit_view.ct.cpp)
-target_link_libraries(test.explicit.implicit_view.ct string_views::string_views)
-add_test(NAME explicit.implicit_view.ct
-	COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target test.explicit.implicit_view.ct
-)
-add_executable(test.format.implicit.ct EXCLUDE_FROM_ALL test.format.implicit.ct.cpp)
-target_link_libraries(test.format.implicit.ct string_views::string_views)
-add_test(NAME format.implicit.ct
-	COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target test.format.implicit.ct
-)
-add_executable(test.format.explicit.ct EXCLUDE_FROM_ALL test.format.explicit.ct.cpp)
-target_link_libraries(test.format.explicit.ct string_views::string_views)
-add_test(NAME format.explicit.ct
-	COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target test.format.explicit.ct
-)
-add_executable(test.nz.c_str.ct EXCLUDE_FROM_ALL test.nz.c_str.ct.cpp)
-target_link_libraries(test.nz.c_str.ct string_views::string_views)
-add_test(NAME nz.c_str.ct
-	COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target test.nz.c_str.ct
-)
+function(add_failing_ct_test id error_msg)
+    set(id "${id}.ct")
+    add_executable("test.${id}" EXCLUDE_FROM_ALL "test.${id}.cpp")
+    target_link_libraries("test.${id}" string_views::string_views)
+    add_test(NAME "${id}"
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target "test.${id}"
+    )
+    set_tests_properties("${id}"
+	PROPERTIES
+	    PASS_REGULAR_EXPRESSION "${error_msg}"
+    )
+endfunction()
+
 
 add_executable(test.checked_access test.checked_access.cpp)
 target_link_libraries(test.checked_access string_views::string_views)
@@ -108,28 +86,17 @@ else()
 endif()
 
 set(TEST_FORMAT_POLICY_ERROR ".*conversion to zero_terminated not allowed.*")
+set(TEST_NO_VALID_INDEX_TYPE ".*valid index.*")
 
-set_tests_properties(
-	explicit.charp.ct explicit.string.ct explicit.implicit_view.ct
-	PROPERTIES
-		#WILL_FAIL TRUE
-		PASS_REGULAR_EXPRESSION "${TEST_CONVERSION_ERROR}"
-)
-set_tests_properties(
-	nullptr.ct
-	PROPERTIES
-		#WILL_FAIL TRUE
-		PASS_REGULAR_EXPRESSION "${TEST_DELETED_FUNCTION_ERROR}"
-)
-set_tests_properties(
-	format.implicit.ct format.explicit.ct
-	PROPERTIES
-		#WILL_FAIL TRUE
-		PASS_REGULAR_EXPRESSION "${TEST_FORMAT_POLICY_ERROR}"
-)
-set_tests_properties(
-	nz.c_str.ct
-	PROPERTIES
-		#WILL_FAIL TRUE
-		PASS_REGULAR_EXPRESSION "${TEST_NO_FUNCTION_ERROR}"
-)
+add_failing_ct_test(explicit.charp "${TEST_CONVERSION_ERROR}")
+add_failing_ct_test(explicit.string "${TEST_CONVERSION_ERROR}")
+add_failing_ct_test(explicit.implicit_view "${TEST_CONVERSION_ERROR}")
+
+add_failing_ct_test(nullptr "${TEST_DELETED_FUNCTION_ERROR}")
+add_failing_ct_test(format.implicit "${TEST_FORMAT_POLICY_ERROR}")
+add_failing_ct_test(format.explicit "${TEST_FORMAT_POLICY_ERROR}")
+
+
+add_failing_ct_test(nz.c_str "${TEST_NO_FUNCTION_ERROR}")
+
+add_failing_ct_test(bool.index "${TEST_NO_VALID_INDEX_TYPE}")
