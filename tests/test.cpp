@@ -168,4 +168,10 @@ int main() {
 	{  // constructor with default policy is noexcept
 		static_assert(noexcept(ex_z_string_view("")), "");
 	}
+
+	{  // substr
+		(void) foo_explicit_view_data.substr();
+		(void) foo_explicit_view_data.substr(1);
+		(void) foo_explicit_nz_view_data.substr(1, 1);
+	}
 }

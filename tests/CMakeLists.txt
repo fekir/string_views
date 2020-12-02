@@ -95,5 +95,6 @@ add_failing_ct_test(format.explicit "${TEST_FORMAT_POLICY_ERROR}")
 
 
 add_failing_ct_test(nz.c_str "${TEST_NO_FUNCTION_ERROR}")
+add_failing_ct_test(crippled.substr "${TEST_NO_FUNCTION_ERROR}")
 
 add_failing_ct_test(bool.index "${TEST_NO_VALID_INDEX_TYPE}")

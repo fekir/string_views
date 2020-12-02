@@ -71,7 +71,7 @@ class create_checked_buff_view_from_str : private checked_buff_view<character, c
 public:
 	using base::construct_noexcept;
 	constexpr create_checked_buff_view_from_str(const character* begin_, const character* end_) noexcept(construct_noexcept) :
-	            base(begin_, end_ - begin_) {
+	            base(begin_, static_cast<std::size_t>(end_ - begin_)) {
 	}
 	constexpr create_checked_buff_view_from_str(const character* begin_, std::size_t size_) noexcept(construct_noexcept) :
 	            base(begin_, size_) {
@@ -214,6 +214,8 @@ public:
 	using reference = const value_type&;
 	using const_reference = const value_type&;
 
+	constexpr static size_type npos = static_cast<size_type>(-1);
+
 	using base_construct::base_construct;
 
 	/// constructor from self
@@ -263,14 +265,22 @@ public:
 	using crtp_access_buffer::back;
 	using crtp_access_buffer::operator[];
 
-	// FIXME
 	// substring has limitation defined by the invariant.
 	// string_view has no invariant
 	// zstring_view can make substr only from somewhere in the middle till the end
 	// non_empty_string_view should make a substring that is not empty...
-	// otherwise make this method generic, and throught template param make
-	basic_string_views substring() noexcept {
+	constexpr basic_string_views substr() const noexcept {
 		return basic_string_views(this->data(), this->data() + this->size());
+	}
+	template<typename _Dummy = void,  // notice, no count!
+	     typename std::enable_if<(format == format_policy::zero_terminated) && std::is_void<_Dummy>::value, character>::type = true>
+	constexpr basic_string_views substr(size_type pos) const {
+		return basic_string_views(this->data() + pos, this->size() - pos);
+	}
+	template<typename _Dummy = void,  //
+	     typename std::enable_if<(format == format_policy::not_zero_terminated) && std::is_void<_Dummy>::value, character>::type = true>
+	constexpr basic_string_views substr(size_type pos, size_type count = npos) const {
+		return basic_string_views(this->data() + pos, std::min(this->size() - pos, count));
 	}
 
 	// for string_view pop_back works on non-empty
