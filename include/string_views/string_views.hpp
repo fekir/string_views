@@ -79,15 +79,15 @@ public:
 	constexpr create_checked_buff_view_from_str(std::nullptr_t) = delete;
 
 	// convert from character*
-	template<typename _Dummy = void,
-	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::explicit_) && std::is_void<_Dummy>::value,
+	template<typename dummy = void,
+	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::explicit_) && std::is_void<dummy>::value,
 	          character>::type = false>
 	constexpr explicit create_checked_buff_view_from_str(const character* data_) noexcept(construct_noexcept) :
 	            base(data_, detail::len(data_)) {
 	}
 
-	template<typename _Dummy = void,
-	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::implicit_) && std::is_void<_Dummy>::value,
+	template<typename dummy = void,
+	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::implicit_) && std::is_void<dummy>::value,
 	          character>::type = true>
 	constexpr create_checked_buff_view_from_str(const character* data_) noexcept(construct_noexcept) : base(data_, detail::len(data_)) {
 	}
@@ -220,22 +220,22 @@ public:
 
 	/// constructor from self
 	/// for all format_policy, conditional explicit
-	template<typename _Dummy = void,  //
-	     conversion_policy p,         //
-	     format_policy f,             //
-	     debug_policy d,              //
-	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::explicit_) && std::is_void<_Dummy>::value,
+	template<typename dummy = void,  //
+	     conversion_policy p,        //
+	     format_policy f,            //
+	     debug_policy d,             //
+	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::explicit_) && std::is_void<dummy>::value,
 	          character>::type = true>
 	constexpr explicit basic_string_views(basic_string_views<character, p, f, content_policy, d> sv) noexcept(
 	     base_construct::construct_noexcept) :
 	            base_construct(sv.data(), sv.size()) {
 		static_assert(f == format_policy::zero_terminated || f == format, "conversion to zero_terminated not allowed");
 	}
-	template<typename _Dummy = void,  //
-	     conversion_policy p,         //
-	     format_policy f,             //
-	     debug_policy d,              //
-	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::implicit_) && std::is_void<_Dummy>::value,
+	template<typename dummy = void,  //
+	     conversion_policy p,        //
+	     format_policy f,            //
+	     debug_policy d,             //
+	     typename std::enable_if<(explicit_constructor_from_charp == conversion_policy::implicit_) && std::is_void<dummy>::value,
 	          character>::type = true>
 	constexpr basic_string_views(basic_string_views<character, p, f, content_policy, d> sv) noexcept(
 	     base_construct::construct_noexcept) :
@@ -249,8 +249,8 @@ public:
 	using buff_view<character>::empty;
 
 	// only for policy zero-term
-	template<typename _Dummy = void,  //
-	     typename std::enable_if<(format == format_policy::zero_terminated) && std::is_void<_Dummy>::value, character>::type = true>
+	template<typename dummy = void,  //
+	     typename std::enable_if<(format == format_policy::zero_terminated) && std::is_void<dummy>::value, character>::type = true>
 	constexpr const_pointer c_str() const noexcept {
 		return this->data();
 	}
@@ -272,13 +272,13 @@ public:
 	constexpr basic_string_views substr() const noexcept {
 		return basic_string_views(this->data(), this->data() + this->size());
 	}
-	template<typename _Dummy = void,  // notice, no count!
-	     typename std::enable_if<(format == format_policy::zero_terminated) && std::is_void<_Dummy>::value, character>::type = true>
+	template<typename dummy = void,  // notice, no count!
+	     typename std::enable_if<(format == format_policy::zero_terminated) && std::is_void<dummy>::value, character>::type = true>
 	constexpr basic_string_views substr(size_type pos) const {
 		return basic_string_views(this->data() + pos, this->size() - pos);
 	}
-	template<typename _Dummy = void,  //
-	     typename std::enable_if<(format == format_policy::not_zero_terminated) && std::is_void<_Dummy>::value, character>::type = true>
+	template<typename dummy = void,  //
+	     typename std::enable_if<(format == format_policy::not_zero_terminated) && std::is_void<dummy>::value, character>::type = true>
 	constexpr basic_string_views substr(size_type pos, size_type count = npos) const {
 		return basic_string_views(this->data() + pos, std::min(this->size() - pos, count));
 	}
