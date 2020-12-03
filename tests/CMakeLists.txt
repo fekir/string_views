@@ -45,16 +45,21 @@ add_test(NAME mytest COMMAND ${TARGET_SYSTEM_EMULATOR} $<TARGET_FILE:mytest>)
 #)
 ########## FAILING TESTS ##########
 function(add_failing_ct_test id error_msg)
-    set(id "${id}.ct")
-    add_executable("test.${id}" EXCLUDE_FROM_ALL "test.${id}.cpp")
-    target_link_libraries("test.${id}" string_views::string_views)
-    add_test(NAME "${id}"
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target "test.${id}"
-    )
-    set_tests_properties("${id}"
-	PROPERTIES
-	    PASS_REGULAR_EXPRESSION "${error_msg}"
-    )
+	set(id "${id}.ct")
+	add_executable("test.${id}" "test.${id}.cpp")
+	set_target_properties("test.${id}"
+		PROPERTIES
+			EXCLUDE_FROM_ALL TRUE
+			EXCLUDE_FROM_DEFAULT_BUILD TRUE
+	)
+	target_link_libraries("test.${id}" string_views::string_views)
+	add_test(NAME "${id}"
+		COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target "test.${id}"
+	)
+	set_tests_properties("${id}"
+		PROPERTIES
+			PASS_REGULAR_EXPRESSION "${error_msg}"
+	)
 endfunction()
 
 
