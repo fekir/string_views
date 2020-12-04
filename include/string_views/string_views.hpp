@@ -268,17 +268,18 @@ public:
 	// substring has limitation defined by the invariant.
 	// string_view has no invariant
 	// zstring_view can make substr only from somewhere in the middle till the end
-	// non_empty_string_view should make a substring that is not empty...
-	constexpr basic_string_views substr() const noexcept {
-		return basic_string_views(this->data(), this->data() + this->size());
-	}
-	template<typename dummy = void,  // notice, no count!
-	     typename std::enable_if<(format == format_policy::zero_terminated) && std::is_void<dummy>::value, character>::type = true>
-	constexpr basic_string_views substr(size_type pos) const {
+	// class without default_content_policy has non-trivial invariant, so no substr
+	template<typename dummy = void,  //
+	     typename std::enable_if<(format == format_policy::zero_terminated)
+	               && std::is_same<content_policy, default_content_policy<character>>::value && std::is_void<dummy>::value,
+	          character>::type = true>
+	constexpr basic_string_views substr(size_type pos) const {  // no count!
 		return basic_string_views(this->data() + pos, this->size() - pos);
 	}
 	template<typename dummy = void,  //
-	     typename std::enable_if<(format == format_policy::not_zero_terminated) && std::is_void<dummy>::value, character>::type = true>
+	     typename std::enable_if<(format == format_policy::not_zero_terminated)
+	               && std::is_same<content_policy, default_content_policy<character>>::value && std::is_void<dummy>::value,
+	          character>::type = true>
 	constexpr basic_string_views substr(size_type pos, size_type count = npos) const {
 		return basic_string_views(this->data() + pos, std::min(this->size() - pos, count));
 	}

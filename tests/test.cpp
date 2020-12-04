@@ -170,7 +170,6 @@ int main() {
 	}
 
 	{  // substr
-		(void) foo_explicit_view_data.substr();
 		(void) foo_explicit_view_data.substr(1);
 		(void) foo_explicit_nz_view_data.substr(1, 1);
 	}
